@@ -1,0 +1,116 @@
+History:
+
+ In mid summer 2011 I spent a little time in southern France, taking still
+photos with my Olympus four-thirds system.  I do have an ultra-wide zoom in
+that system, but I do not usually take it with me because it weighs a ton.
+On a few occasions, I realised that a 24mm lens (35mm equivalent) would have
+been useful, and on other occasions (such as photographing butterflies) a
+lens longer than 210mm equivalent would have been very useful.
+
+ So, when I got home I investigated the current compact cameras and got
+myself a panasonic FZ45.  This comes with a video capability.  At home, I
+managed to configure this so that I could create QuickTime mov files, and
+confirmed that I could play these.  I then went on a long holiday to Austria
+and Switzerland, hoping to photograph narrow-gauge trains, and butterflies.
+
+ Once I was there, I realised that some movies of the railways would be a
+nice souvenir.  Unfortunately, many of my clips turned out to be "not very
+good" - holding a camera one-handed never helps, the audio from a moving train
+mostly records wind noise on the microphone, and most of the time I had no idea
+what would be coming up.  So, many of my clips were not sufficiently interesting
+to stand on their own.
+
+ But I did have three shortish clips which looked as if they might be worth
+putting on youtube.  At that time I had ffmpeg-0.6.0, or perhaps 0.7 by the
+time I was playing with these files.  Getting the mov files to something which
+was smaller (I had a very slow upload speed), acceptable to youtube, and of
+adequate quality) took a lot of experimentation, and I found it very painful.
+
+ Along the way, I got pointed to MediaInfo which has been very useful for my
+subsequent examination of audio and video files.  I then started to try to
+work out what I could do with those clips that would only be useful as part
+of a longer film.  I quickly discovered that using the -vol option in ffmpeg
+would let me make the sound quieter for those parts where the wind noise
+dominated, and I made some notes about which clips I might want to use.  But
+then I got back into {,beyond-}linuxfromscratch editing and never found the
+time to get back to this.
+
+ In May 2014 I finally managed to set aside some time for this.  First, I
+looked for libre editing tools.  Gentoo have ebuilds for many of these, which
+helped me work out dependencies.  I first tried avidemux, but on my hardware
+(possibly, because I use alsa, not pulse, for sound) the sound was useless.
+I looked at various things - lives did not run when I eventually built it, and
+google had no results matching my problem.  The other editing tools seemed to
+have a lot of dependencies, particularly in Python for doing "fancy" things
+which I didn particularly want to do.  In the end, I decided to see if I could
+use ffmpeg on the command line for what I wanted to achieve.  My requirements
+were fairly limited:
+
+- clip the duration of the file in some cases, typically by losing the end
+  but in some cases it might also be useful to lose the start.
+
+- reduce the volume
+
+- fade the video in/out at the end of each clip
+
+- similarly, fade the sound in/out
+
+- produce captions (a title for the movie, perhap "That's All Folks!" at the
+  end : for me, overlaying captions onto film clips is NOT something I want to
+  do, my aims are very much KISS.
+
+- put the various clips together.
+
+- do not lose too much visual quality!
+
+- upload them to youtube.
+
+ I began by using the ffmpeg settings which had worked for me in 2011 (setting
+a video bandwidth of 5500k, and two-pass conversion to x264).  I found out that
+ffmpeg's video fades only seemed to work (in ffmpeg-2.2.2) when start-frame and
+number-of-frames were specified (times should supposedly work), and that I could
+not fade the aac audio.
+
+ I tried creating the audio files in other formats, and quickly noticed (by
+using mediainfo to check) that the audio was typically longer than the video,
+often by 125ms or more.  I knew that I would want to merge ten or more clips
+for the videos, so the difference in stream lengths looked as if it might
+mean that the sound would increasingly lag the picture, but not in a consistent
+fashion.  I then tried creating wav files for the audio, and found they were
+usually the exact same length as the video.
+
+ Unfortunately, x264 video with wav audio is not a valid format for an mp4
+video file.  So, I put them into an mkv container - this is not a common
+combination, but vlc and parole seem happy enough with it [ xine has always
+been problematic for me with mkv files ].
+
+ Joining the clips together gave me more problems, but the ffmpeg wiki pointed
+me to a method that worked.  Unfortunately the command line becomes longer and
+longer as the number of clips increases, and ffmpeg has to re-encode which
+takes time and implies a potential loss of quality but does let me change the
+audio to aac (using fdk_aac : the ffmpeg binaries are probably not distributable
+because of license incompatabilities, so distros will not have this encoder,
+but for those of us who build from source for our own use that is not an issue).
+
+ At this point, I seached around and discovered mkvtoolnix.  Unfortunately,
+for me the merged files are not usable (video colours, and quality, varies
+throughout the file - parts are either partly grey, or with "exotic"colours -
+and the audio is poor.  My initial bug was marked as invalid [ I had managed
+somehow to get "incompatible" settings in the first of my clips ] - after some
+experimentation I added details of the continuing problem with an apparently
+successful run, but I do not know if that bug will get any further attention.
+I did find that the mkv tools can add a title to an mkv video, which might
+be useful (vlc shows it as the window title, instead of the filename).
+
+ Meanwhile, I was trying different settings in ffmpeg.  These did not all do
+what I thought they would, but I eventually came up with some settings that
+created larger files, of subjectively better quality but (hopefully) not _too_
+slow to upload.  My initial 3m10 test video took about 15 minutes to upload,
+the new settings will probably take me something like 7 minutes to upload each
+minute of video.
+
+ After this, I knew what I wanted to do, and it was time to start scripting.
+For me, the biggest problem with any program is validating what it has been
+told to do.  I've now got video-clip.sh to a stage where it works for me, and
+I've started to look at other scripts.
+
