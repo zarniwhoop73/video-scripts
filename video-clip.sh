@@ -28,6 +28,10 @@
 MYFPS=30 # 30 frames per second - it gets used in a sanity-check
 MYPIXELS=1280x720
 
+# values for aac : this is the old way, with my "default" values
+# my camera's mov files are only 16k rate, but 44k1 does no harm.
+AAC="-acodec aac -strict experimental -ac 2 -ar 44100 -ab 96k"
+
 INFILE=
 OSTEM=
 TIMEVAL=
@@ -415,7 +419,9 @@ if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
 	#VFCMD="${VFCMD}\""	
 	VFCMD="${VFCMD}"
 fi
-echo "will set video fade with $VFCMD"
+if [ -n "$VFCMD" ]; then
+	echo "will set video fade with $VFCMD"
+fi
 
 if [ -n "$AFADEVAL" ]; then
 	AFADE="fade $AFADEVAL"
@@ -444,12 +450,16 @@ echo "creating $OSTEM.mp4"
 # crf 22, without preset other than the default medium, and without video buffer,
 # seems to do the job adequately, and quickly : the output is comparatively large,
 # but that seems to be down to using crf.
-# use the old aac audio, it is what I used to use
 # if you uncomment the echo, add a '"' at the end of the command	
 # $VFCMD could also be after crf 22, the result seems identical
 #echo "command will be
 ffmpeg -i $INFILE $START $TIME -s $MYPIXELS $VFCMD  -vcodec libx264 -crf 22 \
- -acodec aac -strict experimental -ac 2 -ar 44100 -ab 96k -y ${OSTEM}.mp4
+ $AAC -y ${OSTEM}.mp4
+
+if ! [ -f ${OSTEM}.mp4 ]; then
+	echo "initial encoding failed"
+	exit 2
+fi
 
 echo "creating $OSTEMbase.wav"
 ffmpeg -i $INFILE $START $TIME -acodec pcm_s16le $VOL -y ${OSTEM}base.wav
