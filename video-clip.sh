@@ -186,6 +186,171 @@ yorn() {
 	#shopt -u nocasematch
 }
 
+# functions for handling the various input parameters:
+process-afade () {
+# although sox does not REQUIRE the 'type' (shape),
+# it make sense to enforce it here.
+# follow by fade-in-length in seconds (might be zero)
+# optionally stop-time - warn if not 0 i.e end of file
+# fade-out-length if not same as fade-in-length
+	FIELDS=$(echo $RHS | awk '{ print NF }')
+	if [ $FIELDS -lt 2 ]; then
+		echo "ERROR: afade requires at least two fields"
+		exit 1
+	fi
+	# REQUIRE a type field - it is technically optional in sox
+	F1=$(echo $RHS | awk '{ print $1 }')
+	case "$F1" in
+		q|h|t|l|p)
+			true
+			;;
+		*)
+			echo "ERROR: afade type MUST be specified for this wrapper"
+			echo "but the supplied value was $F1"
+			exit 1
+		;;
+	esac
+	F2=$(echo $RHS | awk '{ print $2 }')
+	# check if numeric - whole seconds
+	FDIGITS=$(echo "$F2" | pcregrep '\d+')
+	if ! [ "$FDIGITS" = "$F2" ]; then
+		echo "ERROR: afade fade-in length in not numeric"
+		exit 1
+	fi
+	if [ $FIELDS -ge 3 ]; then
+		F3=$(echo $RHS | awk '{ print $3 }')
+		# any third field must be numeric
+		FDIGITS=$(echo "$F3" | pcregrep '\d+')
+		if ! [ "$FDIGITS" = "$F3" ]; then
+			echo "ERROR: afade stop-time (in seconds) is not numeric"
+			exit 1
+		fi
+	fi
+	if [ $FIELDS -ge 4 ]; then
+		F4=$(echo $RHS | awk '{ print $4 }')
+		# any fourth field must be numeric
+		FDIGITS=$(echo "$F4" | pcregrep '\d+')
+		if ! [ "$FDIGITS" = "$F4" ]; then
+			echo "ERROR: afade fade-out-length is not numeric"
+			exit 1
+		fi
+	fi
+	if [ $FIELDS -gt 4 ]; then
+		echo "ERROR: too many fields for afade"
+		echo "use type fade-in-length (stop-time) (fade-out-length)"
+		exit 1
+	fi
+	# if ok, store $RHS
+	AFADEVAL=$RHS
+}
+
+process-infile () {
+INFILE=$RHS
+if ! [ -f $INFILE ]; then
+	echo "Error: input file $INFILE not found."
+	exit 2
+else
+	IDURATION=$(ffprobe $INFILE 2>&1 | grep 'Duration:' | awk '{ print $2 }' | sed 's/,//')
+	IVFRAMES=$(ffprobe -select_streams v -show_streams $INFILE 2>&1 | grep 'nb_frames' | \
+	 cut -d '=' -f 2)
+	if [ "$IVFRAMES" = "N/A" ] || [ -z "$IVFRAMES" ]; then
+		echo "ERROR: is $INFILE a valid video file?"
+		exit 2
+	fi
+	echo "will process $INFILE which has a duration of $IDURATION and $IVFRAMES video frames"
+	# now calculate time for the input file (seconds, decimals)
+	# and then work out the frames per second
+	check-time $IDURATION
+	INUM=$SECONDSDEC
+	# this was originally to one decimal place, in case it ever came out as 29.9
+	# but for the moment it seems to always be 30.on my camera
+	#FPS=$(echo "$IVFRAMES /  $INUM" | bc -l | sed 's/\(.*\..\).*/\1/')
+	FPS=$(echo "$IVFRAMES /  $INUM" | bc )
+	if [ "$FPS" -ne "$MYFPS" ]; then
+		echo "unexpected frames per second, $FPS not $MYFPS - review calculation"
+		exit 2
+	fi
+	# set expected frames, in case time= is not provided
+	# but if already set, use that : buggy if two different input=
+	# files are specified, but that can be blamed on the user.
+	if [ -z "$EXPECTEDFRAMES" ]; then
+		EXPECTEDFRAMES=$IVFRAMES
+	fi
+fi
+}
+
+process-outstem () {
+OSTEM=$RHS
+if [ -f $OSTEM.mp4 ]; then
+	echo "WARNING: $OSTEM.mp4 exists : this has already run, at least in part"
+	let WARN=$WARN+1
+else
+	touch $OSTEM.tmp
+	if [ $? -ne 0 ]; then
+		echo "ERROR: output file stem name seems to be invalid"
+		usage
+	else
+		rm $OSTEM.tmp
+		echo "output stem will be \"$OSTEM\""
+	fi
+fi
+}
+
+process-start () {
+	check-time $RHS
+	if [ "$SECONDSDEC" = "0." ]; then
+		echo "NOTE: start=0 is the default"
+	else
+		STARTVAL="$RHS"
+		STARTNUM="$SECONDSDEC"
+		# this script takes a simple approach.
+		# what is requested might not be a key frame
+		echo "WARNING: timings with 'start' may be approximate"
+		let WARN=$WARN+1
+	fi
+}
+
+process-time () {
+	check-time $RHS
+	TIMEVAL="$RHS"
+	TIMENUM="$SECONDSDEC"
+	EXPECTEDFRAMES=$(echo "$TIMENUM * $FPS" | bc)
+ 	echo "expected output frame total is $EXPECTEDFRAMES"	
+}
+
+process-vfi () {
+	# video fade in - requires frame number and number of frames
+	frames
+	VFISTART=$FRAME1
+	VFICOUNT=$FRAME2
+}
+
+process-vfo () {
+	# video fade in - requires frame number and number of frames
+	frames
+	VFOSTART=$FRAME1
+	VFOCOUNT=$FRAME2
+}
+
+process-vol () {
+	# volume should be exactly 3 digits
+	VOLDIGITS=$(echo "$RHS" | pcregrep '\d\d\d')
+	if [ "$VOLDIGITS" != "$RHS" ]; then
+		echo "ERROR: vol= requires 3 digits"
+		exit 1
+	fi
+	BCVAR=$(echo "$VOLDIGITS < 255" | bc)
+	if [ "$BCVAR" = "1" ]; then
+		echo "reducing volume to $VOLDIGITS"
+	else
+		BCVAR=$(echo "$VOLDIGITS > 255" | bc)
+		if [ "$BCVAR" = "1" ]; then
+			echo "INCREASING volume to $VOLDIGITS"
+		fi
+	fi
+}
+
+
 # main line 
 
 # process the parms
@@ -200,147 +365,28 @@ do
 	RHS=$(echo $1 | cut -d '=' -f 2)
 	case $LHS in
 		afade)
-			# although sox does not REQUIRE the 'type' (shape),
-			# it make sense to enforce it here.
-			# follow by fade-in-length in seconds (might be zero)
-			# optionally stop-time - warn if not 0 i.e end of file
-			# fade-out-length if not same as fade-in-length
-			FIELDS=$(echo $RHS | awk '{ print NF }')
-			if [ $FIELDS -lt 2 ]; then
-				echo "ERROR: afade requires at least two fields"
-				exit 1
-			fi
-			# REQUIRE a type field - it is technically optional in sox
-			F1=$(echo $RHS | awk '{ print $1 }')
-			if [ "$F1" != "q" ] && [ "$F1" != "h" ] && [ "$F1 != "t" ] && [ "$F1" != "l" ] && [ ""$F1" != "p" ]; then
-				echo "ERROR: afade type MUST be specified for this wrapper"
-				exit 1
-			fi
-			F2=$(echo $RHS | awk '{ print $2 }')
-			# check if numeric - whole seconds
-			FDIGITS=$(echo "$F2" | pcregrep '\d+')
-			if ! [ "$FDIGITS" = "$F2" ]; then
-				echo "ERROR: afade fade-in length in not numeric"
-				exit 1
-			fi
-			if [ $FIELDS -ge 3 ]; then
-				F3=$(echo $RHS | awk '{ print $3 }')
-				# any third field must be numeric
-				FDIGITS=$(echo "$F3" | pcregrep '\d+')
-				if ! [ "$FDIGITS" = "$F3" ]; then
-					echo "ERROR: afade stop-time (in seconds) is not numeric"
-					exit 1
-				fi
-			fi
-			if [ $FIELDS -ge 4 ]; then
-				F4=$(echo $RHS | awk '{ print $4 }')
-				# any fourth field must be numeric
-				FDIGITS=$(echo "$F4" | pcregrep '\d+')
-				if ! [ "$FDIGITS" = "$F4" ]; then
-					echo "ERROR: afade fade-out-length is not numeric"
-					exit 1
-				fi
-			fi
-			if [ $FIELDS -gt 4 ]; then
-				echo "ERROR: too many fields for afade"
-				echo "use type fade-in-length (stop-time) (fade-out-length)"
-				exit 1
-			fi
-			# if ok, store $RHS
-			AFADEVAL=$RHS
+			process-afade
 			;;
 		infile)
-			INFILE=$RHS
-			if ! [ -f $INFILE ]; then
-				echo "Error: input file $INFILE not found."
-				exit 2
-			else
-				IDURATION=$(ffprobe $INFILE 2>&1 | grep 'Duration:' | awk '{ print $2 }' | sed 's/,//')
-				IVFRAMES=$(ffprobe -select_streams v -show_streams $INFILE 2>&1 | grep 'nb_frames' | \
-	 cut -d '=' -f 2)
-				if [ "$IVFRAMES" = "N/A" ] || [ -z "$IVFRAMES" ]; then
-					echo "ERROR: is $INFILE a valid video file?"
-					exit 1
-				fi
-				echo "will process $INFILE which has a duration of $IDURATION and $IVFRAMES video frames"
-				# now calculate time for the input file (seconds, decimals)
-				# and then work out the frames per second
-				check-time $IDURATION
-				INUM=$SECONDSDEC
-				# this was originally to one decimal place, in case it ever came out as 29.9
-				# but for the moment it seems to always be 30.on my camera
-				#FPS=$(echo "$IVFRAMES /  $INUM" | bc -l | sed 's/\(.*\..\).*/\1/')
-				FPS=$(echo "$IVFRAMES /  $INUM" | bc )
-				if [ "$FPS" -ne "$MYFPS" ]; then
-					echo "unexpected frames per second, $FPS not $MYFPS - review calculation"
-					exit 2
-				fi
-			fi
+			process-infile
 			;;
 		outstem)
-			OSTEM=$RHS
-			if [ -f $OSTEM.mp4 ]; then
-				echo "WARNING: $OSTEM.mp4 exists : this has already run, at least in part"
-				let WARN=$WARN+1
-			else
-				touch $OSTEM.tmp
-				if [ $? -ne 0 ]; then
-					echo "ERROR: output file stem name seems to be invalid"
-					usage
-				else
-					rm $OSTEM.tmp
-					echo "output stem will be \"$OSTEM\""
-				fi
-			fi
+			process-outstem
 			;;
 		start)
-			check-time $RHS
-			if [ "$SECONDSDEC" = "0." ]; then
-				echo "NOTE: start=0 is the default"
-			else
-				STARTVAL="$RHS"
-				STARTNUM="$SECONDSDEC"
-				# this script takes a simple approach.
-				# what is requested might not be a key frame
-				echo "WARNING: timings with 'start' may be approximate"
-				let WARN=$WARN+1
-			fi
+			process-start
 			;;
 		time)
-			check-time $RHS
-			TIMEVAL="$RHS"
-			TIMENUM="$SECONDSDEC"
-			EXPECTEDFRAMES=$(echo "$TIMENUM * $FPS" | bc)
- 			echo "expected output frame total is $EXPECTEDFRAMES"	
+			process-time
 			;;
 		vfi)
-			# video fade in - requires frame number and number of frames
-			frames
-			VFISTART=$FRAME1
-			VFICOUNT=$FRAME2
+			process-vfi
 			;;
 		vfo)
-			# video fade in - requires frame number and number of frames
-			frames
-			VFOSTART=$FRAME1
-			VFOCOUNT=$FRAME2
+			process-vfo
 			;;
 		vol)
-			# volume should be exactly 3 digits
-			VOLDIGITS=$(echo "$RHS" | pcregrep '\d\d\d')
-			if [ "$VOLDIGITS" != "$RHS" ]; then
-				echo "ERROR: vol= requires 3 digits"
-				exit 1
-			fi
-			BCVAR=$(echo "$VOLDIGITS < 255" | bc)
-			if [ "$BCVAR" = "1" ]; then
-				echo "reducing volume to $VOLDIGITS"
-			else
-				BCVAR=$(echo "$VOLDIGITS > 255" | bc)
-				if [ "$BCVAR" = "1" ]; then
-					echo "INCREASING volume to $VOLDIGITS"
-				fi
-			fi
+			process-vol
 			;;
 		*)
 			echo "unexpected command $LHS"
@@ -473,6 +519,8 @@ if [ $? -ne 0 ]; then
 	echo "abandonned"
 	exit 0
 fi
+
+# Now, run these wonderful commands!
 
 # first create an mp4
 echo "creating $OSTEM.mp4"
