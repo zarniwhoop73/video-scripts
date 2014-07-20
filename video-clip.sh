@@ -9,7 +9,7 @@
 # always seem to turn out longer than the video.
 
 # uses ffmpeg (tested with ffmpeg-2.2.2), pcregrep, sox,
-# plus a standard LFS build e.g. awk, bc, wc
+# plus a standard LFS build e.g. awk, bc, cut, wc
 
 # all parameters are in the form name#"value" and are processed in the
 # order in which they are supplied, so if you supply settings for any

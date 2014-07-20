@@ -13,7 +13,7 @@
 #
 # uses:
 # ImageMagick ('display'), pcregrep, sox
-# and awk, bc, grep, wq
+# and awk, bc, cut, grep, wc
 
 # these are what my camera produces -
 MYFPS=30 # 30 frames per second - it gets used in a sanity-check
