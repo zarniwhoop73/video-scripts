@@ -331,7 +331,7 @@ fi
 
 # and then create the silent wav of $TIMESOX seconds
 echo "command is: sox -n -r $MYFREQ ${OSTEM}.wav trim 0.0 $TIMESOX"
-sox -n -r $MYFREQ ${OSTEM}.wav trim 0.0 $TIMESOX
+sox -n -r $MYFREQ -b 16 ${OSTEM}.wav trim 0.0 $TIMESOX
 if [ $? -ne 0 ]; then
 	echo "creation of silent wav file ${OSTEM}.wav failed"
 	exit 2
