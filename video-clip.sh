@@ -8,7 +8,7 @@
 # which is why they end up in an mkv container - mp4 requires aac, and aac audio streams
 # always seem to turn out longer than the video.
 
-# uses ffmpeg (tested with ffmpeg-2.2.2), pcre, sox,
+# uses ffmpeg (tested with ffmpeg-2.2.2), pcregrep, sox,
 # plus a standard LFS build e.g. awk, bc, wc
 
 # all parameters are in the form name#"value" and are processed in the
