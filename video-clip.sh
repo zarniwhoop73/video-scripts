@@ -326,7 +326,7 @@ process-vfi () {
 }
 
 process-vfo () {
-	# video fade in - requires frame number and number of frames
+	# video fade out - requires frame number and number of frames
 	frames
 	VFOSTART=$FRAME1
 	VFOCOUNT=$FRAME2
