@@ -11,17 +11,24 @@
 # uses ffmpeg (tested with ffmpeg-2.2.2), pcre, sox,
 # plus a standard LFS build e.g. awk, bc, wc
 
-# required:
-# input file (expected to exist, and to end in .mov)
-# output stem (i.e. the name part of the created files
+# all parameters are in the form name#"value" and are processed in the
+# order in which they are supplied, so if you supply settings for any
+# parameter, the last will be used.
 #
-# optional (these all require a string in quotes)
+# required:
+# input file : infile=
+# output stem (i.e. the name part of the created files) : outstem=
+#
+# optional
 # start time : start=
-# start= might not work exactly as expected, for the moment I have little use for it
+# start= might not work exactly as expected (you can only seek to a key
+# frame)
 # duration : time=
-# video fade in vfi= (frame number:frames)
+# video fade in vfi= (frame number:frames) - the numbering appears to
+# begin at the first frame of the input file, which makes a difference
+# if you use start=
 # video fade out vfo= (frame number:frames)
-# audio volume : vol=
+# audio volume : vol= (255 for the same as the input)
 # audio fades (passed to sox) afade=
 
 # these are what my camera produces -
@@ -44,16 +51,22 @@ WARN=0
 usage() {
 	echo "process a video file (tested for .mov) to .mkv with wav audio and x264 video"
 	echo "via mp4 and wav files, using ffmpeg and sox"
-	echo "Required parms: input-file output-stem e.g. p12345.mov file1"
-	echo "optional parms: (all need a double-quoted string)"
+	echo
+	echo "all parms are in the form name=\"value\""
+	echo "Required parms:"
+	echo "infile= : the input file to process"
+	echo "outstem= : the main part of the filename for output files"
+	echo "          (wav files get a suffix.wav, others are .mp4 and .mkv"
+	echo "optional parms:"
 	echo "start= : offset from which to process"
+	echo "        (the result may be approximate if  that point is not a key frame)"
 	echo "time= : duration of output"
 	echo "vfi= : (video fade-in - frame_no:frame_count"
 	echo " NB frame_no is re the original input file, that matters if you specify start="
 	echo "vfo= : (video fade-out - frame_no:frame_count"
 	echo "vol= : audio volume, 3 digits, normal is 255"
 	echo "afade= : audio fade parameter(s) to pass to sox"
-	exit 1
+	exit 2
 }
 
 if [ $# -lt 2 ]; then
@@ -174,49 +187,8 @@ yorn() {
 }
 
 # main line 
-INFILE=$1 ; shift
-if ! [ -f $INFILE ]; then
-	echo "Error: input file $INFILE not found."
-	usage
-else
-	IDURATION=$(ffprobe $INFILE 2>&1 | grep 'Duration:' | awk '{ print $2 }' | sed 's/,//')
-	IVFRAMES=$(ffprobe -select_streams v -show_streams $INFILE 2>&1 | grep 'nb_frames' | \
-	 cut -d '=' -f 2)
-	if [ "$IVFRAMES" = "N/A" ] || [ -z "$IVFRAMES" ]; then
-		echo "ERROR: is $INFILE a valid video file?"
-		exit 1
-	fi
-	echo "will process $INFILE which has a duration of $IDURATION and $IVFRAMES video frames"
-	# now calculate time for the input file (seconds, decimals)
-	# and then work out the frames per second
-	check-time $IDURATION
-	INUM=$SECONDSDEC
-	# this was originally to one decimal place, in case it ever came out as 29.9
-	# but for the moment it seems to always be 30.on my camera
-	#FPS=$(echo "$IVFRAMES /  $INUM" | bc -l | sed 's/\(.*\..\).*/\1/')
-	FPS=$(echo "$IVFRAMES /  $INUM" | bc )
-	if [ "$FPS" -ne "MYFPS" ]; then
-		echo "unexpected frames per second, $FPS not $MYFPS - review calculation"
-		exit 2
-	fi
-fi
 
-OSTEM=$1 ; shift
-if [ -f $OSTEM.mp4 ]; then
-	echo "WARNING: $OSTEM.mp4 exists : this has already run, at least in part"
-	let WARN=$WARN+1
-else
-	touch $OSTEM.tmp
-	if [ $? -ne 0 ]; then
-		echo "ERROR: output file stem name seems to be invalid"
-		usage
-	else
-		rm $OSTEM.tmp
-		echo "output stem will be \"$OSTEM\""
-	fi
-fi
-
-# optional parms
+# process the parms
 while [ $# -gt 0 ];
 do
 	echo $1 | grep -q '=' >/dev/null
@@ -277,6 +249,50 @@ do
 			# if ok, store $RHS
 			AFADEVAL=$RHS
 			;;
+		infile)
+			INFILE=$RHS
+			if ! [ -f $INFILE ]; then
+				echo "Error: input file $INFILE not found."
+				exit 2
+			else
+				IDURATION=$(ffprobe $INFILE 2>&1 | grep 'Duration:' | awk '{ print $2 }' | sed 's/,//')
+				IVFRAMES=$(ffprobe -select_streams v -show_streams $INFILE 2>&1 | grep 'nb_frames' | \
+	 cut -d '=' -f 2)
+				if [ "$IVFRAMES" = "N/A" ] || [ -z "$IVFRAMES" ]; then
+					echo "ERROR: is $INFILE a valid video file?"
+					exit 1
+				fi
+				echo "will process $INFILE which has a duration of $IDURATION and $IVFRAMES video frames"
+				# now calculate time for the input file (seconds, decimals)
+				# and then work out the frames per second
+				check-time $IDURATION
+				INUM=$SECONDSDEC
+				# this was originally to one decimal place, in case it ever came out as 29.9
+				# but for the moment it seems to always be 30.on my camera
+				#FPS=$(echo "$IVFRAMES /  $INUM" | bc -l | sed 's/\(.*\..\).*/\1/')
+				FPS=$(echo "$IVFRAMES /  $INUM" | bc )
+				if [ "$FPS" -ne "$MYFPS" ]; then
+					echo "unexpected frames per second, $FPS not $MYFPS - review calculation"
+					exit 2
+				fi
+			fi
+			;;
+		outstem)
+			OSTEM=$RHS
+			if [ -f $OSTEM.mp4 ]; then
+				echo "WARNING: $OSTEM.mp4 exists : this has already run, at least in part"
+				let WARN=$WARN+1
+			else
+				touch $OSTEM.tmp
+				if [ $? -ne 0 ]; then
+					echo "ERROR: output file stem name seems to be invalid"
+					usage
+				else
+					rm $OSTEM.tmp
+					echo "output stem will be \"$OSTEM\""
+				fi
+			fi
+			;;
 		start)
 			check-time $RHS
 			if [ "$SECONDSDEC" = "0." ]; then
@@ -327,14 +343,23 @@ do
 			fi
 			;;
 		*)
-			echo "unexpected command $LHS"		
-			exit 2
+			echo "unexpected command $LHS"
+			usage
 			;;
 	esac
 	shift
 done
 
+# check that the required parms were provided
+if [ -z "$INFILE" ]; then
+	echo "ERROR: infile= was not specified"
+	usage
+fi
 
+if [ -z "$OSTEM" ]; then
+	echo "ERROR: outstem= was not supplied"
+	usage
+fi
 
 # compare the values, as appropriate
 # 1. if TIMENUM exists, it should not exceed INUM
@@ -400,6 +425,9 @@ fi
 if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
 	# start the video fade command
 	#VFCMD="-vf \""		
+	# for some reason, although this works in double quotes when I
+	# run it by hand, it does not work when ffmpeg is invoked from
+	# the script, but is ok without quoting.
 	VFCMD="-vf "
 	if [ -n "$VFISTART" ]; then
 		#fade in
@@ -417,6 +445,7 @@ fi
 if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
 	# close the video fade command
 	#VFCMD="${VFCMD}\""	
+	# same comment on quoting as for the start of VFCMD
 	VFCMD="${VFCMD}"
 fi
 if [ -n "$VFCMD" ]; then
