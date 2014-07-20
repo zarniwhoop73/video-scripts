@@ -302,7 +302,9 @@ if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
 	#VFCMD="${VFCMD}\""	
 	VFCMD="${VFCMD}"
 fi
-echo "will set video fade with $VFCMD"
+if [ -n "$VFCMD" ]; then
+	echo "will set video fade with $VFCMD"
+fi
 
 if [ $WARN -gt 0 ]; then
 	if [ $WARN -eq 1 ]; then
