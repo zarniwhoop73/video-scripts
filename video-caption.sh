@@ -37,7 +37,7 @@ usage() {
 	echo
 	echo "parms are specified as name=\"value\""
 	echo "Required parms:"
-	echo "input-file= : the png file to use"
+	echo "infile= : the png file to use"
 	echo "time= : duration of output"
 	echo "optional parms:"
 	echo "vfi= : (video fade-in - frame_no:frame_count"
