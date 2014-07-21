@@ -48,12 +48,17 @@ SECSD=$(echo $DURATION | cut -d ':' -f 3)
 let HHSECS=$HH*60
 let MMSECS=$MM*60
 SECS=$(echo "$HHSECS + $MMSECS + $SECSD" | bc)
-# ffprobe sometimes reports nb_frames=N/A, so compute them.
-# for my created files, any non-zero decimal shows there are anomalies.
+
 FPS=$(ffmpeg -i $1 2>&1 | sed -n "s/.*, \(.*\) fps.*/\1/p")
 echo "Frames per second is $FPS"
-# compute how many frames should exist
-echo "computing number of frames using duration $DURATION from ffmpeg"
-FRAMES=$(echo "$FPS * $SECS" | bc)
+
+FRAMES=$(ffprobe -select_streams v -show_streams $1 2>&1 | grep 'nb_frames' | \
+ cut -d '=' -f 2)
+if [ "$FRAMES" = "N/A" ]; then
+	# ffprobe sometimes reports nb_frames=N/A, so compute them.
+	# for my created files, any non-zero decimal shows there are anomalies.
+	echo "computing number of frames using duration $DURATION from ffmpeg"
+	FRAMES=$(echo "$FPS * $SECS" | bc)
+fi
 echo "No. of video frames is $FRAMES"
 
