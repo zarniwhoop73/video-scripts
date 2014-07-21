@@ -522,6 +522,7 @@ fi
 
 # Now, run these wonderful commands!
 
+STARTTIME=$SECONDS
 # first create an mp4
 echo "creating $OSTEM.mp4"
 # crf 22, without preset other than the default medium, and without video buffer,
@@ -567,3 +568,10 @@ ffmpeg -i ${OSTEM}.mp4 -i $MIXWAV -map 0:0 -map 1:0 \
 if [ $? -eq 0 ]; then
 	echo "created ${OSTEM}.mkv"
 fi
+ENDTIME=$SECONDS
+let ELAPSED=$ENDTIME-$STARTTIME
+let EHH=$ELAPSED/3600
+let ELAPSED=$ELAPSED%3600
+let EMM=$ELAPSED/60
+let ELAPSED=$ELAPSED%60
+echo "Creating the files took approx $EHH:$EMM:$ELAPSED"
