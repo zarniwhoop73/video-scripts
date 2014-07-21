@@ -322,14 +322,13 @@ if [ $? -ne 0 ]; then
 	exit 0
 fi
 
-START=$SECONDS
+STARTTIME=$SECONDS
 # first create an mp4
 ffmpeg -loop 1 -i $INFILE -c:v libx264 -t $TIMEVAL $VFCMD -pix_fmt yuv420p -r $MYFPS -y ${OSTEM}.mp4
 if ! [ -f ${OSTEM}.mp4 ]; then
 	echo "creation of$OSTEM.mp4 frmm $INFILE failed"
 	exit 2
 fi
-MP4=$SECONDS
 
 # and then create the silent wav of $TIMESOX seconds
 echo "command is: sox -n -r $MYFREQ ${OSTEM}.wav trim 0.0 $TIMESOX"
@@ -338,13 +337,16 @@ if [ $? -ne 0 ]; then
 	echo "creation of silent wav file ${OSTEM}.wav failed"
 	exit 2
 fi
-WAV=$SECONDS
 
 # and merge them
 time ffmpeg -i ${OSTEM}.mp4 -i ${OSTEM}.wav -map 0:0 -map 1:0 -c:v copy -c:a copy -y ${OSTEM}.mkv
 
 # apart from seeing the error message on the screen, no obvious way to tell
 # if it worked :-(  so report how long, approx, the earlier steps took.
-let MP4TIME=$MP4-$START
-let WAVTIME=$WAV-$MP4
-echo "the mp4 was created in approx $MP4TIME seconds and the wav in $WAVTIME"
+ENDTIME=$SECONDS
+let ELAPSED=$ENDTIME-$STARTTIME
+let EHH=$ELAPSED/3600
+let ELAPSED=$ELAPSED%3600
+let EMM=$ELAPSED/60
+let ELAPSED=$ELAPSED%60
+echo "Creating the files took approx $EHH:$EMM:$ELAPSED"
