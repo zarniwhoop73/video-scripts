@@ -158,7 +158,7 @@ yorn() {
 
 # functions to process the input parameters.
 process-infile () {
-# here, the input file must be a png of hte correct size
+# here, the input file must be a png of the correct size
 INFILE=$RHS
 if ! [ -f $INFILE ]; then
 	echo "ERROR: input file $INFILE not found."
@@ -322,12 +322,14 @@ if [ $? -ne 0 ]; then
 	exit 0
 fi
 
+START=$SECONDS
 # first create an mp4
 ffmpeg -loop 1 -i $INFILE -c:v libx264 -t $TIMEVAL $VFCMD -pix_fmt yuv420p -r $MYFPS -y ${OSTEM}.mp4
 if ! [ -f ${OSTEM}.mp4 ]; then
 	echo "creation of$OSTEM.mp4 frmm $INFILE failed"
 	exit 2
 fi
+MP4=$SECONDS
 
 # and then create the silent wav of $TIMESOX seconds
 echo "command is: sox -n -r $MYFREQ ${OSTEM}.wav trim 0.0 $TIMESOX"
@@ -336,7 +338,13 @@ if [ $? -ne 0 ]; then
 	echo "creation of silent wav file ${OSTEM}.wav failed"
 	exit 2
 fi
+WAV=$SECONDS
 
 # and merge them
-ffmpeg -i ${OSTEM}.mp4 -i ${OSTEM}.wav -map 0:0 -map 1:0 -c:v copy -c:a copy -y ${OSTEM}.mkv
+time ffmpeg -i ${OSTEM}.mp4 -i ${OSTEM}.wav -map 0:0 -map 1:0 -c:v copy -c:a copy -y ${OSTEM}.mkv
 
+# apart from seeing the error message on the screen, no obvious way to tell
+# if it worked :-(  so report how long, approx, the earlier steps took.
+let MP4TIME=$MP4-$START
+let WAVTIME=$WAV-$MP4
+echo "the mp4 was created in approx $MP4TIME seconds and the wav in $WAVTIME"
