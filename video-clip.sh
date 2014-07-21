@@ -462,10 +462,6 @@ if [ -n "$TIMEVAL" ]; then
 	TIME="-t $TIMEVAL"
 	echo "will use a duration of $TIME"
 fi
-if [ -n "$VOLDIGITS" ]; then
-	VOL="-vol $VOLDIGITS"
-	echo "will use $VOL"
-fi
 
 # for vfade, if both exist then they need to be separated by a comma
 if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
