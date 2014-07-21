@@ -339,7 +339,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # and merge them
-time ffmpeg -i ${OSTEM}.mp4 -i ${OSTEM}.wav -map 0:0 -map 1:0 -c:v copy -c:a copy -y ${OSTEM}.mkv
+ffmpeg -i ${OSTEM}.mp4 -i ${OSTEM}.wav -map 0:0 -map 1:0 -c:v copy -c:a copy -y ${OSTEM}.mkv
 
 # apart from seeing the error message on the screen, no obvious way to tell
 # if it worked :-(  so report how long, approx, the earlier steps took.
