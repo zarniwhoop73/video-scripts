@@ -25,9 +25,11 @@ MYFPS=30 # 30 frames per second - it gets used in a sanity-check
 MYPIXELS=1280x720
 COUNT=0
 WARN=
+TITLE=
+TITLESTR=
 
 usage () {
-	echo "$0 outfile fileA fileB [ fileC, fileD, ...]"
+	echo "$0 outfile="filename.mkv" [ title="My Title" ] fileA fileB [ fileC, fileD, ...]"
 	echo "take existing mkv files and \"merge\" them into a video"
 	echo "In practice, they have to be recoded - so take the opportunity"
 	echo "to recode the audio to aac, which is an acceptable format for"
@@ -59,14 +61,37 @@ yorn() {
 
 
 #main line
-if [ $# -lt 3 ]; then
+while [ $# -gt 0 ]; do
+	echo $1 | grep -q '=' || break
+	LHS=$(echo $1 | cut -d '=' -f 1)
+	RHS=$(echo $1 | cut -d '=' -f 2)
+	if [ "$LHS" = "outfile" ]; then
+		# do outfile validation
+		OUTFILE=$RHS
+		if [ -f ${OUTFILE} ]; then
+			WARN=true
+		fi
+
+	elif [ "$LHS" = "title" ]; then
+		# set up title
+		TITLESTR=$RHS
+		TITLE="-metadata title=\"$TITLESTR\""
+	else
+		echo "ERROR: unexpected parameter $1"
+		usage
+	fi
+	shift
+done
+
+if [ -z "$OUTFILE" ]; then
+	echo "ERROR: outfile was not set"
 	usage
 fi
 
-OUTFILE=$1 ; shift
-if [ -f ${OUTFILE} ]; then
-	WARN=true
+if [ -n "$TITLE" ]; then
+	echo "will set title to $TITLESTR"
 fi
+
 
 # validate the specified input files
 COUNT=1
@@ -128,7 +153,7 @@ let COUNT=${COUNT}-1
 # single quotes around ${COMPLEX}...[a]  and also lets me eval the command to
 # execute it, so that I don't have separate "this is what I will do" and
 # " run it" versions.
-COMMAND="ffmpeg ${ARGS} -filter_complex '${COMPLEX}concat=${COUNT}:v=1:a=1 [v] [a]' -map '[v]' -map '[a]' -s ${MYPIXELS} -vcodec libx264 -crf 25 ${AAC} -y ${OUTFILE}"
+COMMAND="ffmpeg ${ARGS} -filter_complex '${COMPLEX}concat=${COUNT}:v=1:a=1 [v] [a]' -map '[v]' -map '[a]' -s ${MYPIXELS} -vcodec libx264 -crf 25 ${AAC} ${TITLE} -y ${OUTFILE}"
 
 echo "Command is"
 echo "$COMMAND"
