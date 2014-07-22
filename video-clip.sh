@@ -35,9 +35,14 @@
 MYFPS=30 # 30 frames per second - it gets used in a sanity-check
 MYPIXELS=1280x720
 
-# values for aac : this is the old way, with my "default" values
+# values for aac : this is the old way, with "default" values
 # my camera's mov files are only 16k rate, but 44k1 does no harm.
-AAC="-acodec aac -strict experimental -ac 2 -ar 44100 -ab 96k"
+#FREQ=44100
+#AAC="-acodec aac -strict experimental -ac 2 -ar $FREQ -ab 96k"
+# I use fdk_aac (ffmpeg binaries created with that plus gpl code are not
+# redistributable), and my camera only uses a 16 KHz frequency
+FREQ=16000
+AAC="-acodec libfdk_aac -cutoff $FREQ -b:a 96k"
 
 INFILE=
 OSTEM=
@@ -47,9 +52,29 @@ VFO=
 VOL=
 AFADE=
 WARN=0
+TITLE=
+TITLESTR=
+MYSELF=$(basename $0)
+# for work files, -crf 25 but for the final version -crf 22
+# to reduce the size at the expense of a little quality.
+if [ "$MYSELF" = "video-single.sh" ]; then
+	CRF=25
+	MERGEMSG="copying the video, recoding the audio to aac in an mkv container"
+	AUDIO="${AAC}"
+else
+	CRF=22
+	MERGEMSG="merging the wav audio with the x264 video in an mkv container"
+	AUDIO="-c:a copy"
+fi
 
 usage() {
-	echo "process a video file (tested for .mov) to .mkv with wav audio and x264 video"
+	if [ "$MYSELF" = "video-single.sh" ]; then
+		echo "process a video file (tested for .mov) to .mkv with aac audio and"
+		echo "x264 video, via intermediate wav audio, for publication on youtube"
+	else
+		echo "process a video file (tested for .mov) to .mkv with wav audio and"
+		echo "x264 video, for later merging with other files"
+	fi
 	echo "via mp4 and wav files, using ffmpeg and sox"
 	echo
 	echo "all parms are in the form name=\"value\""
@@ -61,6 +86,9 @@ usage() {
 	echo "start= : offset from which to process"
 	echo "        (the result may be approximate if  that point is not a key frame)"
 	echo "time= : duration of output"
+	if [ "$MYSELF" = "video-single.sh" ]; then
+		echo "title= : title for the video"
+	fi
 	echo "vfi= : (video fade-in - frame_no:frame_count"
 	echo " NB frame_no is re the original input file, that matters if you specify start="
 	echo "vfo= : (video fade-out - frame_no:frame_count"
@@ -315,7 +343,16 @@ process-time () {
 	TIMEVAL="$RHS"
 	TIMENUM="$SECONDSDEC"
 	EXPECTEDFRAMES=$(echo "$TIMENUM * $FPS" | bc)
- 	echo "expected output frame total is $EXPECTEDFRAMES"	
+	echo "expected output frame total is $EXPECTEDFRAMES"
+}
+
+process-title () {
+	TITLESTR=$RHS
+	TITLE="-metadata title=\"$TITLESTR\""
+	if [ "$MYSELF" != "video-single.sh" ]; then
+		echo "WARNING: specifying a title for $MYSELF is silly"
+		let WARN=$WARN+1
+	fi
 }
 
 process-vfi () {
@@ -348,6 +385,7 @@ process-vol () {
 			echo "INCREASING volume to $VOLDIGITS"
 		fi
 	fi
+	VOL="-vol $VOLDIGITS"
 }
 
 
@@ -378,6 +416,9 @@ do
 			;;
 		time)
 			process-time
+			;;
+		title)
+			process-title
 			;;
 		vfi)
 			process-vfi
@@ -509,6 +550,13 @@ if [ $WARN -gt 0 ]; then
 fi
 
 # perhaps ought to show the commands anyway ?
+# now bring the parts back together
+
+# debugging
+echo "volume command is $VOL"
+echo "CRF is $CRF"
+echo "AUDIO is $AUDIO"
+echo "$MERGEMSG"
 
 yorn
 if [ $? -ne 0 ]; then
@@ -521,13 +569,14 @@ fi
 STARTTIME=$SECONDS
 # first create an mp4
 echo "creating $OSTEM.mp4"
-# crf 22, without preset other than the default medium, and without video buffer,
-# seems to do the job adequately, and quickly : the output is comparatively large,
-# but that seems to be down to using crf.
+# crf 22, without preset other than the default medium, and without video
+# buffer, seems to do the job adequately, and quickly : the output is
+# comparatively large, but that seems to be down to using crf.  For a
+# final file which is to be uplaoded, crf 25 is a  lot smaller.
 # if you uncomment the echo, add a '"' at the end of the command	
 # $VFCMD could also be after crf 22, the result seems identical
 #echo "command will be
-ffmpeg -i $INFILE $START $TIME -s $MYPIXELS $VFCMD  -vcodec libx264 -crf 22 \
+ffmpeg -i $INFILE $START $TIME -s $MYPIXELS $VFCMD  -vcodec libx264 -crf $CRF \
  $AAC -y ${OSTEM}.mp4
 
 if ! [ -f ${OSTEM}.mp4 ]; then
@@ -556,10 +605,9 @@ else
 	MIXWAV=${OSTEM}base.wav
 fi
 
-# now bring the parts back together
-echo "merging the wav audio with the x264 video in an mkv container"
+echo $MERGEMSG
 ffmpeg -i ${OSTEM}.mp4 -i $MIXWAV -map 0:0 -map 1:0 \
- -c:v copy -c:a copy -y ${OSTEM}.mkv
+ -c:v copy ${AUDIO} ${TITLE} -y ${OSTEM}.mkv
 
 if [ $? -eq 0 ]; then
 	echo "created ${OSTEM}.mkv"
