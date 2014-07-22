@@ -42,12 +42,18 @@ helped me work out dependencies.  I first tried avidemux, but on my hardware
 I looked at various things - lives did not run when I eventually built it, and
 google had no results matching my problem.  The other editing tools seemed to
 have a lot of dependencies, particularly in Python for doing "fancy" things
-which I didn particularly want to do.  In the end, I decided to see if I could
+which I didn't particularly want to do.  In the end, I decided to see if I could
 use ffmpeg on the command line for what I wanted to achieve.  My requirements
 were fairly limited:
 
 - clip the duration of the file in some cases, typically by losing the end
   but in some cases it might also be useful to lose the start.
+
+ Update: since my camera produces QuickTime mov files where every frame is a
+ keyframe, I have discovered it is easier to make a copy of the original
+ file using
+  ffmpeg -i original.mov -ss start-offset -t duration -c copy -y newname.mov
+ and then I can confirm the number of frames.
 
 - reduce the volume
 
@@ -64,6 +70,9 @@ were fairly limited:
 - do not lose too much visual quality!
 
 - upload them to youtube.
+
+- and, eventually, I added thee ability to put a title thre, because showing
+  the filename is not particularly nice.
 
  I began by using the ffmpeg settings which had worked for me in 2011 (setting
 a video bandwidth of 5500k, and two-pass conversion to x264).  I found out that
@@ -92,25 +101,67 @@ audio to aac (using fdk_aac : the ffmpeg binaries are probably not distributable
 because of license incompatabilities, so distros will not have this encoder,
 but for those of us who build from source for our own use that is not an issue).
 
- At this point, I seached around and discovered mkvtoolnix.  Unfortunately,
-for me the merged files are not usable (video colours, and quality, varies
-throughout the file - parts are either partly grey, or with "exotic"colours -
-and the audio is poor.  My initial bug was marked as invalid [ I had managed
-somehow to get "incompatible" settings in the first of my clips ] - after some
-experimentation I added details of the continuing problem with an apparently
-successful run, but I do not know if that bug will get any further attention.
-I did find that the mkv tools can add a title to an mkv video, which might
-be useful (vlc shows it as the window title, instead of the filename).
-
  Meanwhile, I was trying different settings in ffmpeg.  These did not all do
 what I thought they would, but I eventually came up with some settings that
 created larger files, of subjectively better quality but (hopefully) not _too_
-slow to upload.  My initial 3m10 test video took about 15 minutes to upload,
-the new settings will probably take me something like 7 minutes to upload each
-minute of video.
+slow to upload.
 
  After this, I knew what I wanted to do, and it was time to start scripting.
 For me, the biggest problem with any program is validating what it has been
-told to do.  I've now got video-clip.sh to a stage where it works for me, and
-I've started to look at other scripts.
+told to do.  I think these scripts are now adequately useful for me.
+
+ The scripts are:
+
+video-caption.sh	convert a png to an mkv file.  The resulting
+			files seem to be 67ms longer than intended, but
+			both streams have the same length.  Optionally,
+			fade the video in/out.
+
+video-clip.sh		convert an input file to mp4 and optionally fade
+			the video in/out, extract the audio to wav,
+			optionally change the volume and fade it in out,
+			merge the results into an mkv container.  This
+			trades file size for run time.  The quality
+			settings are hardcoded.
+
+			 On my AMD Phenom, processing individual clips
+			takes about 1.25x real-time (and several multiples
+			of that to decide what to use, where to cut, and
+			to review tham!).  Merging (i.e. remuxing) takes
+			about 1.1x real time.  For a video which lasted
+			about 10m30, the final file was 433MB but the total
+			including the workfiles was 2.2GB. On _my_ upload
+			speed, that will take between 40 minutes and an
+			hour to upload.  So, if you use these scripts,
+			I recommend that you produce a short video as a
+			test.
+
+video-single.sh		symlink to video-clip.sh, processes one input file
+			to create an mkv output file of "final" quality (as
+			in video-merge.sh, below) with aac audio.
+
+	Those scripts read parameters in the form name="value".  If you are
+	silly enough to supply the same parameter twice, the latter will be
+	used, except when setting the expected number of frames.
+
+video-merge.sh		specify output="filename", optionally title="My Title",
+			 and a series of input files which are to be processed
+			 in order.  They will be concatenated in ffmpeg - that
+			involves remuxing, and the output quality is slightly
+			reduced, to get less-huge files.  The resulting file is
+			still very big.
+
+video-summary.sh	Produce a summary of a file, such as what streams
+			it contains (my scripts assume one video and one audio),
+			duration, frame rate (calculated if ffprobe returns
+			'N/A').
+
+ LICENSE:
+
+ If there is anything interesting in my scripts, I probably found it via google.
+My original intention was to mark these as Public Domain.  But in some countries
+there are apparently issues with that, so you may use these scripts under the
+terms of the wtfpl.
+
+Ken Moffat
 
