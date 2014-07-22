@@ -71,8 +71,10 @@ were fairly limited:
 
 - upload them to youtube.
 
-- and, eventually, I added thee ability to put a title thre, because showing
-  the filename is not particularly nice.
+- and, eventually, I added thee ability to put a title there, because showing
+  the filename is not particularly nice.  Unfortunately, this does not always
+  show at youtube - when I started, the full filename was shown, but now I'm
+  not clear what is picked up - perhaps anything in parenthese () is ignored.
 
  I began by using the ffmpeg settings which had worked for me in 2011 (setting
 a video bandwidth of 5500k, and two-pass conversion to x264).  I found out that
