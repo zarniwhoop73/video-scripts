@@ -92,8 +92,8 @@ usually the exact same length as the video.
 
  Unfortunately, x264 video with wav audio is not a valid format for an mp4
 video file.  So, I put them into an mkv container - this is not a common
-combination, but vlc and parole seem happy enough with it [ xine has always
-been problematic for me with mkv files ].
+combination, but vlc and parole seem happy enough with it [ xine gives silent
+audio with these work files, but is fine with the finised x264/aac files ].
 
  Joining the clips together gave me more problems, but the ffmpeg wiki pointed
 me to a method that worked.  Unfortunately the command line becomes longer and
