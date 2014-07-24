@@ -30,6 +30,8 @@
 # video fade out vfo= (frame number:frames)
 # audio volume : vol= (255 for the same as the input)
 # audio fades (passed to sox) afade=
+# Constant Rate Factor, crf=
+#  for ffmpeg's x264 encoding, overwrites my default in $CRF
 
 # these are what my camera produces -
 MYFPS=30 # 30 frames per second - it gets used in a sanity-check
@@ -55,10 +57,13 @@ WARN=0
 TITLE=
 TITLESTR=
 MYSELF=$(basename $0)
-# for work files, -crf 25 but for the final version -crf 22
+# for work files, -crf 24 but for the final version -crf 22
 # to reduce the size at the expense of a little quality.
+# 21 throughout is a better quality (if the pictures are reasonable
+# quality - on my automatic, many are not) but the resulting
+# upload (unless the duration is very short) will be unmanageably slow.
 if [ "$MYSELF" = "video-single.sh" ]; then
-	CRF=25
+	CRF=24
 	MERGEMSG="copying the video, recoding the audio to aac in an mkv container"
 	AUDIO="${AAC}"
 else
@@ -83,6 +88,9 @@ usage() {
 	echo "outstem= : the main part of the filename for output files"
 	echo "          (wav files get a suffix.wav, others are .mp4 and .mkv"
 	echo "optional parms:"
+	echo "afade= : audio fade parameter(s) to pass to sox"
+	echo "crf- : change the Constant Rate Factor value in ffmpeg's x264 encoding,"
+	echo "       from the default of $CRF"
 	echo "start= : offset from which to process"
 	echo "        (the result may be approximate if  that point is not a key frame)"
 	echo "time= : duration of output"
@@ -93,7 +101,6 @@ usage() {
 	echo " NB frame_no is re the original input file, that matters if you specify start="
 	echo "vfo= : (video fade-out - frame_no:frame_count"
 	echo "vol= : audio volume, 3 digits, normal is 255"
-	echo "afade= : audio fade parameter(s) to pass to sox"
 	exit 2
 }
 
@@ -205,7 +212,7 @@ yorn() {
 	done
 
 	echo "$ans"
-	if [ "$ans" = "y" ]; then
+	if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
 		return 0
 	else
 		return 1
@@ -270,6 +277,17 @@ process-afade () {
 	fi
 	# if ok, store $RHS
 	AFADEVAL=$RHS
+}
+
+
+process-crf () {
+	NEWCRF=$RHS
+	if ! [ "$NEWCRF" -eq "$RHS" ] 2>/dev/null; then
+		echo "ERROR: crf requires a numeric value"
+		exit 1
+	fi
+	echo "changing crf from $CRF to $NEWCRF"
+	CRF=$NEWCRF
 }
 
 process-infile () {
@@ -404,6 +422,9 @@ do
 	case $LHS in
 		afade)
 			process-afade
+			;;
+		crf)
+			process-crf
 			;;
 		infile)
 			process-infile
@@ -572,7 +593,7 @@ echo "creating $OSTEM.mp4"
 # crf 22, without preset other than the default medium, and without video
 # buffer, seems to do the job adequately, and quickly : the output is
 # comparatively large, but that seems to be down to using crf.  For a
-# final file which is to be uplaoded, crf 25 is a  lot smaller.
+# final file which is to be uplaoded, crf 24 or 25 are a lot smaller.
 # if you uncomment the echo, add a '"' at the end of the command	
 # $VFCMD could also be after crf 22, the result seems identical
 #echo "command will be

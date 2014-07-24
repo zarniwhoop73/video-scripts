@@ -147,7 +147,7 @@ yorn() {
 	done
 
 	echo "$ans"
-	if [ "$ans" = "y" ]; then
+	if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
 		return 0
 	else
 		return 1

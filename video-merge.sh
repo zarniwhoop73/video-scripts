@@ -11,8 +11,6 @@
 # requires at least three parameters - unlike the other scripts in this suite,
 # $1 will be the output file, $2 ... are the files to merge.
 
-# variables will go here	
-
 # values for aac : this is the old way, with "default" values
 #FREQ=44100
 #AAC="-acodec aac -strict experimental -ac 2 -ar $FREQ -ab 96k"
@@ -21,6 +19,7 @@
 FREQ=16000
 AAC="-acodec libfdk_aac -cutoff $FREQ -b:a 96k"
 
+CRF=24
 MYFPS=30 # 30 frames per second - it gets used in a sanity-check
 MYPIXELS=1280x720
 COUNT=0
@@ -29,11 +28,13 @@ TITLE=
 TITLESTR=
 
 usage () {
-	echo "$0 outfile="filename.mkv" [ title="My Title" ] fileA fileB [ fileC, fileD, ...]"
+	echo "$0 outfile="filename.mkv" [ title="My Title" ] [ crf=XX ] fileA fileB [ fileC, fileD, ...]"
 	echo "take existing mkv files and \"merge\" them into a video"
 	echo "In practice, they have to be recoded - so take the opportunity"
 	echo "to recode the audio to aac, which is an acceptable format for"
 	echo "uploading to youtube."
+	echo "crf- : change the Constant Rate Factor value in ffmpeg's x264 encoding,"
+	echo "       from the default of $CRF"
 	exit 1
 }
 
@@ -50,7 +51,7 @@ yorn() {
 	done
 
 	echo "$ans"
-	if [ "$ans" = "y" ]; then
+	if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
 		return 0
 	else
 		return 1
@@ -76,6 +77,15 @@ while [ $# -gt 0 ]; do
 		# set up title
 		TITLESTR=$RHS
 		TITLE="-metadata title=\"$TITLESTR\""
+	elif [ "$LHS" = "crf" ]; then
+		# force a different crf value
+		NEWCRF=$RHS
+		if ! [ "$NEWCRF" -eq "$RHS" ] 2>/dev/null; then
+			echo "ERROR: crf requires a numeric value"
+			exit 1
+		fi
+		echo "changing crf from $CRF to $NEWCRF"
+		CRF=$NEWCRF
 	else
 		echo "ERROR: unexpected parameter $1"
 		usage
@@ -146,14 +156,19 @@ done
 let COUNT=${COUNT}-1
 
 # NB using just -crf 25 in x264 without any other video parms seems to give
-# adequately good quality, but the resulting files are around 40% bigger than
-# what I previously used.
+# adequately good quality on some files, but with others -crf 24 is visibly
+# better. With -crf 25 the resulting files are around 40% bigger than
+# what I previously used (my earlier uses tried differnet presets and different
+# sizes of video buffer).  Using lower values gives better quality, but
+# increases both the time and the file size.
+# Using crf 21 on both workfiles and output is visibly better in the good bits,
+# but the outputs will take me too long to upload.
 
 # putting the command into a string gets around a problem when trying to put
 # single quotes around ${COMPLEX}...[a]  and also lets me eval the command to
 # execute it, so that I don't have separate "this is what I will do" and
 # " run it" versions.
-COMMAND="ffmpeg ${ARGS} -filter_complex '${COMPLEX}concat=${COUNT}:v=1:a=1 [v] [a]' -map '[v]' -map '[a]' -s ${MYPIXELS} -vcodec libx264 -crf 25 ${AAC} ${TITLE} -y ${OUTFILE}"
+COMMAND="ffmpeg ${ARGS} -filter_complex '${COMPLEX}concat=${COUNT}:v=1:a=1 [v] [a]' -map '[v]' -map '[a]' -s ${MYPIXELS} -vcodec libx264 -crf ${CRF} ${AAC} ${TITLE} -y ${OUTFILE}"
 
 echo "Command is"
 echo "$COMMAND"
