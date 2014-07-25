@@ -18,3 +18,8 @@ reliably here - in x264 video, only every 250th frame seems to be a key frame.
  After that, edit the png in the gimp to add the required text, and then use
 video-caption.sh to create the mkv.
 
+ Similar commands can also be used at the start of a clip, to extract the
+beginning.  I have also played with the rate setting, to get a shorter period
+in the png, and ended up with 3 pngs which was not what I had intended.  At
+least the %Nd part of the name covers that.
+
