@@ -62,7 +62,7 @@ were fairly limited:
 - similarly, fade the sound in/out
 
 - produce captions (a title for the movie, perhap "That's All Folks!" at the
-  end : for me, overlaying captions onto film clips is NOT something I want to
+  end) : for me, overlaying captions onto film clips is NOT something I want to
   do, my aims are very much KISS.
 
 - put the various clips together.
@@ -74,7 +74,8 @@ were fairly limited:
 - and, eventually, I added thee ability to put a title there, because showing
   the filename is not particularly nice.  Unfortunately, this does not always
   show at youtube - when I started, the full filename was shown, but now I'm
-  not clear what is picked up - perhaps anything in parenthese () is ignored.
+  not clear what is picked up - perhaps anything in parentheses () is ignored.
+  Or, maybe I have to fill in the first blank field after uploading ;)
 
  I began by using the ffmpeg settings which had worked for me in 2011 (setting
 a video bandwidth of 5500k, and two-pass conversion to x264).  I found out that
