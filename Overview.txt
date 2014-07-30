@@ -132,11 +132,6 @@ told to do.  I think these scripts are now adequately useful for me.
 
  The scripts are:
 
-video-caption.sh	convert a png to an mkv file.  The resulting
-			files seem to be 67ms longer than intended, but
-			both streams have the same length.  Optionally,
-			fade the video in/out.
-
 video-clip.sh		convert an input file to mp4 and optionally fade
 			the video in/out, extract the audio to wav,
 			optionally change the volume and fade it in out,
@@ -159,6 +154,11 @@ video-clip.sh		convert an input file to mp4 and optionally fade
 video-single.sh		symlink to video-clip.sh, processes one input file
 			to create an mkv output file of "final" quality (as
 			in video-merge.sh, below) with aac audio.
+
+video-slide.sh		convert a png to an mkv file.  The resulting
+			files seem to be 67ms longer than intended, but
+			both streams have the same length.  Optionally,
+			fade the video in/out.
 
 	Those scripts read parameters in the form name="value".  If you are
 	silly enough to supply the same parameter twice, the latter will be

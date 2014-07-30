@@ -22,7 +22,7 @@ that every video frame in a .mov file is a keyframe, so -ss ought to work
 reliably here - in x264 video, only every 250th frame seems to be a key frame.
 
  After that, edit the png in the gimp to add the required text, and then use
-video-caption.sh to create the mkv.
+video-slide.sh to create the mkv.
 
  Similar commands can also be used at the start of a clip, to extract the
 beginning.  I have also played with the rate setting, to get a shorter period
