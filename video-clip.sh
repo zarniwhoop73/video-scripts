@@ -32,6 +32,8 @@
 # audio fades (passed to sox) afade=
 # Constant Rate Factor, crf=
 #  for ffmpeg's x264 encoding, overwrites my default in $CRF
+# text : text, for a white 24pt caption in the centre of the picture.
+#  - this requires ffmpeg to be built with --enable-libfreetype.
 
 # these are what my camera produces -
 MYFPS=30 # 30 frames per second - it gets used in a sanity-check
@@ -72,6 +74,32 @@ else
 	AUDIO="-c:a copy"
 fi
 
+# for text which uses the process-text function, to set a caption
+# the first three ought to be settable by exporting them, but trying to
+# correctly export a position for the text seems silly.
+
+#TEXTFONT does not need a value if DejaVu Sans is available to fontconfig
+# -defer testing this until it is required
+#TEXTFONT= # /path/to/ttf-or-otf
+
+# The Pts size for the font
+if [ -z "$TEXTPTS" ]; then
+	TEXTPTS=24
+fi
+
+# The colour (sic) of the text
+# https://www.ffmpeg.org/ffmpeg-utils.html#Color
+# the names seem to be the old X11 names.
+if [ -z "$TEXTCOLOR" ]; then
+	TEXTCOLOR=white
+fi
+
+# set the text in the middle of the screen, using example from man 1 ffmpeg-filters
+# sometimes, a different value of y might be more useful
+#TEXTPOSITION="x=(w-text_w)/2:y=(h-text_h-line_h)/2"
+# this version puts it nearer the bottom
+TEXTPOSITION="x=(w-text_w)/2:y=(h-text_h-line_h)*3/4"
+
 usage() {
 	if [ "$MYSELF" = "video-single.sh" ]; then
 		echo "process a video file (tested for .mov) to .mkv with aac audio and"
@@ -101,6 +129,8 @@ usage() {
 	echo " NB frame_no is re the original input file, that matters if you specify start="
 	echo "vfo= : (video fade-out - frame_no:frame_count"
 	echo "vol= : audio volume, 3 digits, normal is 255"
+	echo "text= : if ffmpeg has been compiled using --enable-libfreetype, show this"
+	echo "       text in white, 24pt DejaVu Sans, in the centre of the picture."
 	exit 2
 }
 
@@ -356,6 +386,39 @@ process-start () {
 	fi
 }
 
+process-text () {
+	# check that ffmpeg was compiled against libfreetype (so that the drawtext
+	# video filter will work), find the path to DejaVu Sans using fc-list,
+	# unless $TEXTFONT has been set
+	# and then set up the text.  This is for a caption, but it will apply to
+	# the whole video (for me, it is easiest to copy the original to three
+	# parts : before caption, with caption, after caption : and then process
+	# them individually.  NB text is always white 24 pt unless TEXTCOLOR and/or
+	# TEXTSIZE are set or exported to this script.  TEXTPOSITION is hardcoded
+	# above.
+
+	# confirm ffmpeg is linked against libfreetype, I did not used to bother
+	# doing that.  NB 'ffmpeg -filters | grep drawtext' produces unmanageable
+	# output on both stdout and stderr, but might work cleanly in a subshell.
+	ldd $(which ffmpeg) | grep -q freetype
+	if [ $? -ne 0 ]; then
+		echo "ERROR : text= was specified, but ffmpeg was not built against libfreetype"
+		exit 1
+	fi
+	if [ -z "$TEXTFONT" ]; then
+		TEXTFONT=$(fc-list | grep 'DejaVu Sans:style=Book' | cut -d ':' -f 1)
+		if [ -z "$TEXTFONT" ]; then
+			echo "ERROR: please set TEXTFONT to point to your desired ttf or otf font"
+		fi
+	fi
+	# things break at any spaces in the text, using the values of variables containing
+	# double quotes for the video filter settings is beyond me!
+	# so change to non break space - I used rxvt-unicode to key in U+00A0 here
+	TEXTTEXT=$(echo $RHS | sed 's/ / /g' )
+	#echo $TEXTTEXT | grep ' ' && echo "changed space to non break space U+00A0" || echo "FAIL"
+	DRAWTEXT="drawtext=fontsize=${TEXTPTS}:fontfile=${TEXTFONT}:fontcolor=${TEXTCOLOR}:text=${TEXTTEXT}:${TEXTPOSITION}"
+}
+
 process-time () {
 	check-time $RHS
 	TIMEVAL="$RHS"
@@ -434,6 +497,9 @@ do
 			;;
 		start)
 			process-start
+			;;
+		text)
+			process-text
 			;;
 		time)
 			process-time
@@ -525,8 +591,17 @@ if [ -n "$TIMEVAL" ]; then
 	echo "will use a duration of $TIME"
 fi
 
+# For captions using drawtext, they not only occupy the whole clip, they
+# are also fully visible while fading in oor out.
+if [ -n "$iDRAWTEXT" ]; then
+	if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
+		echo "WARNING: drawtext will display text across the video fade(s)"
+		let WARN=$WARN+1
+	fi
+fi
+
 # for vfade, if both exist then they need to be separated by a comma
-if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
+if [ -n "$VFISTART" ] || [ -n "$DRAWTEXT" ] || [ -n "$VFOSTART" ]; then
 	# start the video fade command
 	#VFCMD="-vf \""		
 	# for some reason, although this works in double quotes when I
@@ -545,15 +620,22 @@ fi
 if [ -n "$VFOSTART" ]; then
 	# fade out
 	VFCMD="${VFCMD}fade=out:$VFOSTART:$VFOCOUNT"
+	# if DRAWTEXT also set, add a comma
+	if ! [ -n "DRAWTEXT" ]; then
+		VFCMD="${VFCMD},"
+	fi
 fi
-if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
-	# close the video fade command
+if [ -n "$DRAWTEXT" ]; then
+	VFCMD="${VFCMD}${DRAWTEXT}"
+fi
+if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ] || [ -n "$DRAWTEXT" ]; then
+	# close the video filter command
 	#VFCMD="${VFCMD}\""	
 	# same comment on quoting as for the start of VFCMD
 	VFCMD="${VFCMD}"
 fi
 if [ -n "$VFCMD" ]; then
-	echo "will set video fade with $VFCMD"
+	echo "will set video filter to $VFCMD"
 fi
 
 if [ -n "$AFADEVAL" ]; then
