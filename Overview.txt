@@ -61,16 +61,22 @@ were fairly limited:
 
 - similarly, fade the sound in/out
 
-- produce captions (a title for the movie, perhap "That's All Folks!" at the
-  end) : for me, overlaying captions onto film clips was not something I wanted
-  to do, my aims are very much KISS.  However, after looking at some films from
-  other people I can see that this is a useful thing to do - if not too hard.
-  Almost failed at "not too hard" - I have a problem with using double quotes
-  within variables which are used t make up the arguments for -vf, and it struck
-  again here : the command values after the first space in the text were treated
-  as new commands.  In the end, changing the space(s) to UTF-8 non-break-space
-  using rxvt-unicode to let me enter the glyph value of '(00)A0' made this
-  work.
+- produce static captions on static backgrounds (a title for the movie, perhaps
+  "That's All Folks!" at the end).
+
+- for me, overlaying captions onto film clips was not something I wanted to do,
+  my aims are very much KISS.  However, after looking at some films from other
+  people I can see that this is a useful thing to do - if it is not too hard.
+
+   Almost failed at "not too hard" - I have a problem with using double quotes
+  within variables which are used to make up the arguments for -vf, and it bit
+  me again here : the command values after the first space in the text were
+  treated as new commands.  In the end, changing the space(s) to UTF-8
+  non-break-space using rxvt-unicode to let me enter the glyph value of '(00)A0'
+  made this work.  However, now that I have used this (split clip into before,
+  with-text, after input files using ffmpeg before processing them) I notice
+  that every time text appears or disappears, there is a slight visible stutter
+  in the finished video if I play it in vlc (xine is fine).
 
 - put the various clips together.
 
