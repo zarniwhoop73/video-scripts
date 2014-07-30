@@ -62,20 +62,31 @@ were fairly limited:
 - similarly, fade the sound in/out
 
 - produce captions (a title for the movie, perhap "That's All Folks!" at the
-  end) : for me, overlaying captions onto film clips is NOT something I want to
-  do, my aims are very much KISS.
+  end) : for me, overlaying captions onto film clips was not something I wanted
+  to do, my aims are very much KISS.  However, after looking at some films from
+  other people I can see that this is a useful thing to do - if not too hard.
+  Almost failed at "not too hard" - I have a problem with using double quotes
+  within variables which are used t make up the arguments for -vf, and it struck
+  again here : the command values after the first space in the text were treated
+  as new commands.  In the end, changing the space(s) to UTF-8 non-break-space
+  using rxvt-unicode to let me enter the glyph value of '(00)A0' made this
+  work.
 
 - put the various clips together.
 
-- do not lose too much visual quality!
+- do not lose too much visual quality!  In practice, I have to balance this
+  agaisnt my upload speeds - on a good day, I get 2Mbps up, which is about
+  10.5MB per minute.
 
 - upload them to youtube.
 
-- and, eventually, I added thee ability to put a title there, because showing
+- and, eventually, I added the ability to put a title there, because showing
   the filename is not particularly nice.  Unfortunately, this does not always
   show at youtube - when I started, the full filename was shown, but now I'm
   not clear what is picked up - perhaps anything in parentheses () is ignored.
-  Or, maybe I have to fill in the first blank field after uploading ;)
+  Or, maybe I have to fill in the first blank field after uploading ;)  Looks
+  as if the title is not necessarily used, but it's still a nice thing to have
+  when reviewing the local files.
 
  I began by using the ffmpeg settings which had worked for me in 2011 (setting
 a video bandwidth of 5500k, and two-pass conversion to x264).  I found out that
@@ -94,7 +105,7 @@ usually the exact same length as the video.
  Unfortunately, x264 video with wav audio is not a valid format for an mp4
 video file.  So, I put them into an mkv container - this is not a common
 combination, but vlc and parole seem happy enough with it [ xine gives silent
-audio with these work files, but is fine with the finised x264/aac files ].
+audio with these work files, but is fine with the finished x264/aac files ].
 
  Joining the clips together gave me more problems, but the ffmpeg wiki pointed
 me to a method that worked.  Unfortunately the command line becomes longer and

@@ -1,0 +1,46 @@
+My cheat-sheet for raw ffmpeg commands.
+
+1. Extracting the first (or last) frame(s) to a png.
+
+ I wanted to try extracting the last frame from what would be the final clip,
+to get a png to which I could add a caption saying "The End" using the gimp.
+
+ The following command does not exactly do that - if I've got it right, it
+averages the last half second.
+
+ This was a .mov file : according to ffprobe, every frame is a keyframe
+(unlike x264 where keyframes seem to only be on every 250th frame).  I think
+that ffmpeg's  -ss setting ought to be reliable in this situation.
+
+ First I ran video-summary.sh and determined that the file length was 39.5s.
+
+ Then I ran:
+ffmpeg -i filename -r 1/2 -ss 0:00:39.0 -t 0:00:00.5 -f image2 end%05d.png
+
+ That created exactly one file, end00001.png. By using ffprobe I had determined
+that every video frame in a .mov file is a keyframe, so -ss ought to work
+reliably here - in x264 video, only every 250th frame seems to be a key frame.
+
+ After that, edit the png in the gimp to add the required text, and then use
+video-caption.sh to create the mkv.
+
+ Similar commands can also be used at the start of a clip, to extract the
+beginning.  I have also played with the rate setting, to get a shorter period
+in the png, and ended up with 3 pngs which was not what I had intended.  At
+least the %Nd part of the name covers that!
+
+
+2. Cutting a clip into parts.
+
+ I started out using the -ss and -t parameters in ffmpeg, and transferred those
+to start= time= when I wrote the first script.  But as I noted above, my input
+files are all .mov where every frame is a key frame, so it is sometimes more
+convenient to copy a clip into multiple parts, e.g. it lets me determine the
+number of frames with certainty (for setting vfo= values), and now that I have
+decided to put captions on some clips (text=) it allows me to put the part with
+a caption into a separate file, because the drawtext filter writes to the whole
+output file.
+
+  ffmpeg -i original.mov -ss start-offset -t duration -c copy -y newname.mov
+
+
