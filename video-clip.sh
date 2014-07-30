@@ -327,6 +327,12 @@ if ! [ -f $INFILE ]; then
 	exit 2
 else
 	IDURATION=$(ffprobe $INFILE 2>&1 | grep 'Duration:' | awk '{ print $2 }' | sed 's/,//')
+	#echo IDURATION begins as $IDURATION
+	# a value of 00:00:08.00 caused bash's shell arithmetic to blow up,
+	# because 08 was treated as invalid octal.
+	# so strip any leading zeroes from the parts.
+	IDURATION=$(echo $IDURATION | sed -e 's/:0/:/g' -e's/^00/0/')
+	#echo IDURATION becomes $IDURATION
 	IVFRAMES=$(ffprobe -select_streams v -show_streams $INFILE 2>&1 | grep 'nb_frames' | \
 	 cut -d '=' -f 2)
 	if [ "$IVFRAMES" = "N/A" ] || [ -z "$IVFRAMES" ]; then
@@ -335,7 +341,7 @@ else
 	fi
 	echo "will process $INFILE which has a duration of $IDURATION and $IVFRAMES video frames"
 	# now calculate time for the input file (seconds, decimals)
-	# and then work out the frames per second
+	# and then work out the frames per second : call check-time to set $SECONDSDEC.
 	check-time $IDURATION
 	INUM=$SECONDSDEC
 	# this was originally to one decimal place, in case it ever came out as 29.9
