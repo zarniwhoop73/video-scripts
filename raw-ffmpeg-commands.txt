@@ -6,28 +6,26 @@ My cheat-sheet for raw ffmpeg commands.
 to get a png to which I could add a caption saying "The End" using the gimp.
 
  The following command does not exactly do that - if I've got it right, it
-averages the last half second.
+averages the last three frames (30 fps, so 1/10th second is 3 frames) :
+
+ffmpeg -i infile.mov -r 1/10 -ss 0:01:13.9 -t 0.1 -f image2 end%d.png
 
  This was a .mov file : according to ffprobe, every frame is a keyframe
 (unlike x264 where keyframes seem to only be on every 250th frame).  I think
-that ffmpeg's  -ss setting ought to be reliable in this situation.
+that ffmpeg's  -ss setting ought to be reliable in this situation.  My camera's
+mov files all seem to have lengths in either whole seconds or half seconds.
+In this case, the file was 1m14 long.
 
- First I ran video-summary.sh and determined that the file length was 39.5s.
-
- Then I ran:
-ffmpeg -i filename -r 1/2 -ss 0:00:39.0 -t 0:00:00.5 -f image2 end%05d.png
-
- That created exactly one file, end00001.png. By using ffprobe I had determined
-that every video frame in a .mov file is a keyframe, so -ss ought to work
-reliably here - in x264 video, only every 250th frame seems to be a key frame.
+ That created exactly one file, end1.png.  I guess that if you wished, you could
+extract individual frames using a rate of 1/30, but with that approach you will
+quickly need to switch to something like filename%03d.png for up to 33 seconds,
+or bigger numbers for longer clips - that would use a lot more storage.
 
  After that, edit the png in the gimp to add the required text, and then use
 video-slide.sh to create the mkv.
 
  Similar commands can also be used at the start of a clip, to extract the
-beginning.  I have also played with the rate setting, to get a shorter period
-in the png, and ended up with 3 pngs which was not what I had intended.  At
-least the %Nd part of the name covers that!
+beginning.
 
 
 2. Cutting a clip into parts.
