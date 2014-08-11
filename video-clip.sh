@@ -434,7 +434,7 @@ process-time () {
 }
 
 process-title () {
-	TITLESTR=$RHS
+	TITLESTR=$(echo $RHS | sed 's/ / /g' )
 	TITLE="-metadata title=\"$TITLESTR\""
 	if [ "$MYSELF" != "video-single.sh" ]; then
 		echo "WARNING: specifying a title for $MYSELF is silly"
