@@ -599,7 +599,7 @@ fi
 
 # For captions using drawtext, they not only occupy the whole clip, they
 # are also fully visible while fading in oor out.
-if [ -n "$iDRAWTEXT" ]; then
+if [ -n "$DRAWTEXT" ]; then
 	if [ -n "$VFISTART" ] || [ -n "$VFOSTART" ]; then
 		echo "WARNING: drawtext will display text across the video fade(s)"
 		let WARN=$WARN+1
