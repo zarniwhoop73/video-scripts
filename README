@@ -132,6 +132,10 @@ told to do.  I think these scripts are now adequately useful for me.
 
  The scripts are:
 
+mpv2mp4.sh		Take one of my mkv files produced by the other
+			scripts and put it into an M@EG-4 container so that
+			firefox can play a local copy.  Needs MediaInfo.
+
 video-clip.sh		convert an input file to mp4 and optionally fade
 			the video in/out, extract the audio to wav,
 			optionally change the volume and fade it in out,
