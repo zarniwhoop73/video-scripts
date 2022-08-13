@@ -14,6 +14,10 @@
 # Later experimentation shows that some mkv files have other audio codecs
 # which tend not to work, giving a silent result unless recoded.
 #
+# Later, I discovered that some mkv files I had downloaded were VP9
+# with vorbis - this script now recodes any non-AVC video using
+# libx264 and the default crf23
+#
 # This uses ffmpeg (tested with ffmpeg-5.1), mediainfo (the commandline
 # version, tested with 21.09) and a standard LFS build.  If the audio
 # format needs to be recoded (I found one mkv with ogg audio, which
@@ -102,23 +106,21 @@ OUTFILE="$BASENAME.mp4"
 echo "creating $OUTFILE from $1"
 if [ "$RECODE" = "true" ]; then
 	# assume default crf 23 will be good enough
-	# for both -c:v and -vcodec the - is removed
-	# using --vcodec gives Unrecognized option '-vcodec libx264'
-	# if I hard-code -c:v and pass libx264 I get
-	# Unable to find a suitable output format for 'libx264'
-	# So, try hardcoding the parts
-	if [ "$SOUND" != "recode" ]; then
-		ffmpeg -i $1 -c:v libx264 -c:a copy $OUTFILE
-	else
-		ffmpeg -i $1 -c:v libx264 $AAC $OUTFILE
-	fi
+	FFV=' -c:v libx264'
 else
-	if [ "$SOUND" != "recode" ]; then
-		ffmpeg -i $1 -c:v copy -c:a copy $OUTFILE
-	else
-		ffmpeg -i $1 -c:v copy $AAC $OUTFILE
-	fi
+	FFV=' -c:v copy'
+fi
+if [ "$SOUND" != "recode" ]; then
+	FFA=' -c:a copy'
+else
+	FFA="$AAC"
 fi
 
+# debug what it will do
+echo Video was $VIDEO, will use $FFV
+echo audio was $AUDIO, will use $FFA
 sleep 5
-ffmpeg -i $1 $FFV $FFA $OUTFILE
+
+ffmpeg -i $1 $FFV $FFA $OUTFILE	
+
+
