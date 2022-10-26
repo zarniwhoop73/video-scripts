@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # I created my youtube uploads as mkv because I needed to convert the
-# original mov files to soemthing I can reliably watch locally (mpeg-4 video)
+# original mov files to something I can reliably watch locally (mpeg-4 video)
 # and to fade in, or out, the audio when creating a clip.
 # But I want to be able to watch these in firefox, for convenience,
 # and firefox doesn't open mkv files.
