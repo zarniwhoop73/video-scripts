@@ -130,7 +130,23 @@ slow to upload.
 For me, the biggest problem with any program is validating what it has been
 told to do.  I think these scripts are now adequately useful for me.
 
+Update from 2022:
+
+ I decided it would be convenient to take some other mkv videos I had
+downloaded and put them in an mp4 container so that I could play them in
+firefox. For this I have added mkv2mp4.sh which does not depend on the other
+scripts, but in those cases where it needs to recode the audio it, like the
+others, uses ffmpeg linked against fdk_aac.  This was tested with ffmpeg5.1.
+When I looked at the ffmpeg wiki in around August 22, using fdk_aac was said
+to still give higher quality than ffmpeg's own aac encoder.
+
  The scripts are:
+
+mkv2mp4.sh		Convert an mkv video to mp3.  Use mediainfo to
+			minimally check the format, and if the audio is
+			neither aac nor MPEG Audio then recode it to aac.
+			That is necessary for files with e.g. Ogg audio.
+			Also recode the video if other formats such as VP9.
 
 mpv2mp4.sh		Take one of my mkv files produced by the other
 			scripts and put it into an M@EG-4 container so that
